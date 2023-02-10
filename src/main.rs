@@ -16,11 +16,11 @@ use crate::cache::DBOperations;
 mod cache;
 
 static CACHE_DATABASE_PATH: &str = "./database";
-static SERVER_PORT: u16 = 3000;
-//static PATH_TO_TEST_FILES: &str = "/var/www/html/";
-static PATH_TO_TEST_FILES: &str = "C:\\Users\\Charl.Kivioja\\Desktop\\http-test-server\\testFiles\\";
-//static TEST_FILES: [&str; 4] = ["500KB.html", "1MB.html", "10MB.html", "100MB.html"];
-static TEST_FILES: [&str; 1] = ["500KB.html"];
+static SERVER_PORT: u16 = 8080;
+static PATH_TO_TEST_FILES: &str = "/var/www/html/";
+//static PATH_TO_TEST_FILES: &str = "C:\\Users\\Charl.Kivioja\\Desktop\\http-test-server\\testFiles\\";
+static TEST_FILES: [&str; 4] = ["500KB.html", "1MB.html", "10MB.html", "100MB.html"];
+//static TEST_FILES: [&str; 1] = ["500KB.html"];
 static IS_POPULATING_OF_DATABASE_NEEDED: bool = true;
 
 #[tokio::main]
