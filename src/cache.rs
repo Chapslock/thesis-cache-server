@@ -18,7 +18,7 @@ impl DBOperations for Database {
         let mut opts = Options::default();
         opts.create_if_missing(true);
         opts.set_max_open_files(1000);
-        opts.increase_parallelism(3);
+        opts.increase_parallelism(10);
         opts.set_use_fsync(false);
         opts.set_bytes_per_sync(8388608);
         opts.optimize_for_point_lookup(1024);
