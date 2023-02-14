@@ -1,4 +1,4 @@
-use rocksdb::{DB, Options, DBCompactionStyle};
+use rocksdb::{DB, Options};
 use std::sync::Arc;
 
 pub trait DBOperations {
@@ -33,11 +33,11 @@ impl DBOperations for Database {
         match self.inst.get(k.as_bytes()) {
             Ok(Some(v)) => {
                 let result = String::from_utf8(v).unwrap();
-                println!("Cache hit for key : {} \nReturning value!", k);
+                println!("Cache hit for key : {}", k);
                 return Some(result);
             }
             Ok(None) => {
-                println!("Cache miss for key : {} \nReturning None", k);
+                println!("Cache miss for key : {}", k);
                 return None;
             }
             Err(e) => {
