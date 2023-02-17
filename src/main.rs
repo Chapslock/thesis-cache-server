@@ -1,3 +1,6 @@
+mod cache;
+mod conf;
+
 use std::future::Future;
 use std::net::SocketAddr;
 use std::pin::Pin;
@@ -12,16 +15,7 @@ use std::fs::File;
 use std::io::prelude::*;
 
 use crate::cache::DBOperations;
-
-mod cache;
-
-static CACHE_DATABASE_PATH: &str = "./database";
-static SERVER_PORT: u16 = 80;
-static PATH_TO_TEST_FILES: &str = "/var/www/html/";
-//static PATH_TO_TEST_FILES: &str = "C:\\Users\\Charl.Kivioja\\Desktop\\http-test-server\\testFiles\\";
-static TEST_FILES: [&str; 4] = ["500KB.html", "1MB.html", "10MB.html", "100MB.html"];
-//static TEST_FILES: [&str; 1] = ["500KB.html"];
-static IS_POPULATING_OF_DATABASE_NEEDED: bool = true;
+use crate::conf::{IS_POPULATING_OF_DATABASE_NEEDED, SERVER_PORT, TEST_FILES, CACHE_DATABASE_PATH, PATH_TO_TEST_FILES};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
