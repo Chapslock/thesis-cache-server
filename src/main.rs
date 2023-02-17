@@ -29,7 +29,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         populate_database().expect("Populating the database failed !");
     }
 
-    let addr = SocketAddr::from(([127, 0, 0, 1], SERVER_PORT));
+    let addr = SocketAddr::from(([0, 0, 0, 0], SERVER_PORT));
 
     // We create a TcpListener and bind it to 127.0.0.1:3000
     let listener = TcpListener::bind(addr).await?;
