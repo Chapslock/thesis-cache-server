@@ -19,6 +19,8 @@ impl DBOperations for Database {
         opts.create_if_missing(true);
         opts.set_use_direct_reads(true); 
         opts.set_use_direct_io_for_flush_and_compaction(true);
+        opts.set_compaction_readahead_size(2 * 1024 * 1024); //2MB
+        opts.set_writable_file_max_buffer_size(1024 * 1024); //1MB
         return Database {         
             inst: Arc::new(DB::open(&opts, file_path).unwrap()),
         };
