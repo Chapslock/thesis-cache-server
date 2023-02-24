@@ -17,7 +17,7 @@ use hyper::{Body, Method, Request, Response, Result, Server, StatusCode};
 
 pub static NOTFOUND: &[u8] = b"Not Found";
 pub static CACHE_DATABASE_PATH: &str = "./database";
-pub static SERVER_PORT: u16 = 8080;
+pub static SERVER_PORT: u16 = 80;
 pub static PATH_TO_TEST_FILES: &str = "/var/www/html/";
 //static PATH_TO_TEST_FILES: &str = "C:\\Users\\Charl.Kivioja\\Desktop\\http-test-server\\testFiles\\";
 pub static TEST_FILES: [&str; 4] = ["500KB.html", "1MB.html", "10MB.html", "100MB.html"];
@@ -45,7 +45,7 @@ async fn main() {
         }
     });
 
-    let addr = SocketAddr::from(([127, 0, 0, 1], SERVER_PORT));
+    let addr = SocketAddr::from(([0, 0, 0, 0], SERVER_PORT));
     let server = Server::bind(&addr).serve(make_service);
     println!("Listening on http://{}", addr);
     if let Err(e) = server.await {
