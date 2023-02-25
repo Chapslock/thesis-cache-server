@@ -1,13 +1,14 @@
 #![deny(warnings)]
 
 use std::fs::File;
-use std::io::{Read, Cursor};
+use std::io::{Read};
 use std::net::SocketAddr;
 use std::path::PathBuf;
 use std::sync::Arc;
 
+use hyper::body::Bytes;
 //use futures::io::Cursor;
-use rocksdb::{Options, DB};
+use rocksdb::{Options, DB, DBPinnableSlice};
 //use tokio::fs::File;
 
 //use tokio_util::codec::{BytesCodec, FramedRead};
@@ -40,7 +41,7 @@ async fn main() {
         let db = db.clone();
         async {
             Ok::<_, hyper::Error>(service_fn(move |req| {
-                response_examples(req, db.to_owned())
+                response_examples(req, db.clone())
             }))
         }
     });
@@ -73,6 +74,66 @@ fn not_found() -> Response<Body> {
 }
 
 async fn simple_file_send(filename: &str, db: Arc<DB>) -> Result<Response<Body>> {
+    if db.key_may_exist(filename) {
+        let (sender, body) = Body::channel();
+        let response: Response<Body> = Response::new(body);
+
+        let mut read_offset = 0;
+        let filename = Arc::new(filename.to_owned());
+
+        //* 
+        let mut sender = sender;
+        loop {
+            let pinnable_slice: DBPinnableSlice = match db.get_pinned(filename.as_bytes()) {
+                Ok(Some(pinnable_slice)) => pinnable_slice,
+                Ok(None) => break,
+                Err(e) => panic!("Error reading value: {:?}", e),
+            };
+            let remaining = pinnable_slice.len() - read_offset;
+            let chunk_size = std::cmp::min(remaining, 1024 * 1024);
+            let chunk_data = &pinnable_slice[read_offset .. read_offset + chunk_size];
+            let data = chunk_data.to_vec();
+            if let Err(e) = sender.send_data(Bytes::from(data)).await {
+                panic!("{}", e);
+            };
+            //sender.send_data(Bytes::from(chunk_data)).await;
+            read_offset += chunk_size;
+        }
+        // */
+        /*
+        let task = tokio::spawn(async move {
+            unsafe {
+                let mut sender = sender;
+                let pinnable_slice: DBPinnableSlice = db.get_pinned(filename.as_bytes()).expect("Value should have been present!").unwrap();
+                /*let pinnable_slice = match db.get_pinned(filename.as_bytes()) {
+                    Ok(Some(pinnable_slice)) => pinnable_slice,
+                    Ok(None) => return,
+                    Err(e) => panic!("Error reading value: {:?}", e),
+                };*/
+                let pinnable_slice = Arc::from(pinnable_slice);
+                loop {
+                    let remaining = pinnable_slice.len() - read_offset;
+                    if remaining == 0 {
+                        break;
+                    }
+    
+                    let chunk_size = std::cmp::min(remaining, 1024 * 1024);
+                    //let chunk_data = &pinnable_slice[read_offset .. read_offset + chunk_size];
+                    let mut iter = pinnable_slice.chunks(chunk_size);
+                    sender.send_data(Bytes::from(iter.next().unwrap())).await;
+                    read_offset += chunk_size;
+    
+                }
+    
+                drop(pinnable_slice);
+            }
+        });
+        // */
+
+        return Ok(response);
+
+    }
+    /*
     // Serve a file by asynchronously reading it by chunks using tokio-util crate.
     let chunk_size = 1024 * 1024; //1MB
     if let Ok(Some(file)) = db.get(filename.as_bytes()) {
@@ -84,10 +145,11 @@ async fn simple_file_send(filename: &str, db: Arc<DB>) -> Result<Response<Body>>
         let body = Body::wrap_stream(futures::stream::iter(stream));
         return Ok(Response::new(body));
     }
-
+    // */
     Ok(not_found())
 }
 
+/*
 struct StreamChunks<R: Read> {
     reader: R,
     chunk_size: usize,
@@ -113,7 +175,7 @@ impl<R: Read> Iterator for StreamChunks<R> {
         }
     }
 }
-
+// */
 fn populate_database(db: Arc<DB>) -> std::io::Result<()> {
     for file_name in &TEST_FILES {
         let mut file_path: String = PATH_TO_TEST_FILES.to_owned();
