@@ -94,7 +94,7 @@ async fn simple_file_send(filename: &str, db: Arc<DB>) -> Result<Response<Body>>
         while written < value.len().try_into().unwrap() {
             let start = written;
             let end = std::cmp::min(CHUNK_SIZE + written, value.len().try_into().unwrap());
-            let buffer = &value[start.try_into().unwrap()..end.try_into().unwrap()].to_owned();
+            let buffer = &value[start.try_into().unwrap()..end.try_into().unwrap()];
             written += buffer.len() as u64;
             let res: Result<Vec<u8>> = Ok(buffer.to_vec());
             yield res;
