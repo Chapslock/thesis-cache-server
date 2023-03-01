@@ -1,8 +1,10 @@
+use std::cell::RefCell;
 use std::fs::File;
 use std::io::Read;
 use std::net::SocketAddr;
 
 use std::path::PathBuf;
+use std::rc::Rc;
 
 use hyper::header::CONTENT_LENGTH;
 use hyper::http::HeaderValue;
@@ -77,21 +79,22 @@ fn not_found() -> Response<Body> {
 }
 
 async fn simple_file_send(filename: &str, db: Arc<DB>) -> Result<Response<Body>> {
-    let value = db
-        .get_pinned(filename.as_bytes())
-        .expect("Entry does not exist!")
-        .unwrap()
-        .as_ref()
-        .to_owned();
+    //This is what breaks the code!
+    //when we create owned data from borrowed, it will allocate memory for it
+    let doc_len = db.get_pinned(filename.as_bytes()).expect("Does not exist!").unwrap().len();
+    let content_length = HeaderValue::from_str(&doc_len.to_string()).unwrap();
 
-    let doc_len = &value.len();
+    let filename = filename.clone().to_owned();
     let make_stream = async_stream::stream! {
+        let value = db
+            .get_pinned(filename.as_bytes())
+            .expect("Entry does not exist!")
+            .unwrap();
         let mut written: u64 = 0;
-
         while written < value.len().try_into().unwrap() {
             let start = written;
             let end = std::cmp::min(CHUNK_SIZE + written, value.len().try_into().unwrap());
-            let buffer = &value[start.try_into().unwrap()..end.try_into().unwrap()];
+            let buffer = &value[start.try_into().unwrap()..end.try_into().unwrap()].to_owned();
             written += buffer.len() as u64;
             let res: Result<Vec<u8>> = Ok(buffer.to_vec());
             yield res;
@@ -99,12 +102,10 @@ async fn simple_file_send(filename: &str, db: Arc<DB>) -> Result<Response<Body>>
     };
 
     let body = Body::wrap_stream(make_stream);
-    let content_length = HeaderValue::from_str(&doc_len.to_string()).unwrap();
     let response = Response::builder()
-        .header(CONTENT_LENGTH, content_length)
-        .body(body)
-        .unwrap();
-
+    .header(CONTENT_LENGTH, content_length)
+    .body(body)
+    .unwrap();
     Ok(response)
 }
 
