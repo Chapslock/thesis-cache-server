@@ -1,10 +1,8 @@
-use std::cell::RefCell;
 use std::fs::File;
 use std::io::Read;
 use std::net::SocketAddr;
 
 use std::path::PathBuf;
-use std::rc::Rc;
 
 use hyper::header::CONTENT_LENGTH;
 use hyper::http::HeaderValue;
@@ -81,7 +79,11 @@ fn not_found() -> Response<Body> {
 async fn simple_file_send(filename: &str, db: Arc<DB>) -> Result<Response<Body>> {
     //This is what breaks the code!
     //when we create owned data from borrowed, it will allocate memory for it
-    let doc_len = db.get_pinned(filename.as_bytes()).expect("Does not exist!").unwrap().len();
+    let doc_len = db
+        .get_pinned(filename.as_bytes())
+        .expect("Does not exist!")
+        .unwrap()
+        .len();
     let content_length = HeaderValue::from_str(&doc_len.to_string()).unwrap();
 
     let filename = filename.clone().to_owned();
@@ -103,9 +105,9 @@ async fn simple_file_send(filename: &str, db: Arc<DB>) -> Result<Response<Body>>
 
     let body = Body::wrap_stream(make_stream);
     let response = Response::builder()
-    .header(CONTENT_LENGTH, content_length)
-    .body(body)
-    .unwrap();
+        .header(CONTENT_LENGTH, content_length)
+        .body(body)
+        .unwrap();
     Ok(response)
 }
 
