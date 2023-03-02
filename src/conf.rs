@@ -1,8 +1,16 @@
-
+pub static NOTFOUND: &[u8] = b"Not Found";
 pub static CACHE_DATABASE_PATH: &str = "./database";
+pub static CHUNK_SIZE: u64 = 10 * 1024 * 1024; // 10MB
+
+//*
+pub static SERVER_IP: [u8; 4] = [0, 0, 0, 0];
 pub static SERVER_PORT: u16 = 80;
 pub static PATH_TO_TEST_FILES: &str = "/var/www/html/";
-//static PATH_TO_TEST_FILES: &str = "C:\\Users\\Charl.Kivioja\\Desktop\\http-test-server\\testFiles\\";
-pub static TEST_FILES: [&str; 5] = ["500KB.html", "1MB.html", "10MB.html", "100MB.html", "3GB.html"];
-//static TEST_FILES: [&str; 1] = ["500KB.html"];
-pub static IS_POPULATING_OF_DATABASE_NEEDED: bool = true;
+pub static TEST_FILES: [&str; 4] = ["500KB.html", "1MB.html", "10MB.html", "100MB.html"];
+// */
+/*
+pub static SERVER_IP: [u8; 4] = [127, 0, 0, 1];
+pub static SERVER_PORT: u16 = 3000;
+pub static PATH_TO_TEST_FILES: &str = "C:\\Users\\Charl.Kivioja\\Desktop\\http-test-server\\testFiles\\";
+pub static TEST_FILES: [&str; 2] = ["500KB.html", "100MB.html"];
+// */

@@ -4,6 +4,7 @@ use std::net::SocketAddr;
 
 use std::path::PathBuf;
 
+use conf::{CHUNK_SIZE, NOTFOUND, TEST_FILES};
 use hyper::header::CONTENT_LENGTH;
 use hyper::http::HeaderValue;
 use rocksdb::{Options, DB};
@@ -12,43 +13,25 @@ use std::sync::Arc;
 use hyper::service::{make_service_fn, service_fn};
 use hyper::{Body, Method, Request, Response, Result, Server, StatusCode};
 
-pub static NOTFOUND: &[u8] = b"Not Found";
-pub static CACHE_DATABASE_PATH: &str = "./database";
-pub static CHUNK_SIZE: u64 = 10 * 1024 * 1024; // 10MB
+use crate::conf::{CACHE_DATABASE_PATH, PATH_TO_TEST_FILES, SERVER_IP, SERVER_PORT};
 
-//*
-pub static SERVER_IP: [u8; 4] = [0, 0, 0, 0];
-pub static SERVER_PORT: u16 = 80;
-pub static PATH_TO_TEST_FILES: &str = "/var/www/html/";
-pub static TEST_FILES: [&str; 4] = ["500KB.html", "1MB.html", "10MB.html", "100MB.html"];
-// */
-/*
-pub static SERVER_IP: [u8; 4] = [127, 0, 0, 1];
-pub static SERVER_PORT: u16 = 3000;
-static PATH_TO_TEST_FILES: &str = "C:\\Users\\Charl.Kivioja\\Desktop\\http-test-server\\testFiles\\";
-static TEST_FILES: [&str; 2] = ["500KB.html", "100MB.html"];
-// */
+mod conf;
 
 #[tokio::main]
 async fn main() {
-    pretty_env_logger::init();
-    let mut opts = Options::default();
-    opts.create_if_missing(true);
-    opts.set_use_direct_reads(true);
-    opts.set_use_direct_io_for_flush_and_compaction(true);
-    opts.set_max_background_jobs(2);
-    opts.set_compaction_readahead_size(2 * 1024 * 1024); //2MB
-    opts.set_writable_file_max_buffer_size(1024 * 1024); //1MB
-    let db = Arc::new(DB::open(&opts, CACHE_DATABASE_PATH).unwrap());
-    populate_database(db.clone()).expect("Populating the database failed!");
+    pretty_env_logger::init(); //For logging
+    let db = init_database();
+    populate_database(db.clone()).expect("Populating the database failed!"); // Adds the initial files to the database
 
+    // Creates a service function that handles all requests made to the server
     let make_service = make_service_fn(move |_| {
         let db = db.clone();
         async {
-            Ok::<_, hyper::Error>(service_fn(move |req| response_examples(req, db.to_owned())))
+            Ok::<_, hyper::Error>(service_fn(move |req| handle_requests(req, db.to_owned())))
         }
     });
 
+    // Initialise the HTTP server
     let addr = SocketAddr::from((SERVER_IP, SERVER_PORT));
     let server = Server::bind(&addr).serve(make_service);
     println!("Listening on http://{}", addr);
@@ -57,12 +40,12 @@ async fn main() {
     }
 }
 
-async fn response_examples(req: Request<Body>, db: Arc<DB>) -> Result<Response<Body>> {
+async fn handle_requests(req: Request<Body>, db: Arc<DB>) -> Result<Response<Body>> {
     match req.method() {
         &Method::GET => {
             let path: PathBuf = req.uri().path().parse().unwrap();
             let file_name = path.file_name().unwrap().to_str().unwrap();
-            simple_file_send(file_name, db).await
+            cache_file_send(file_name, db).await
         }
         _ => Ok(not_found()),
     }
@@ -76,9 +59,7 @@ fn not_found() -> Response<Body> {
         .unwrap()
 }
 
-async fn simple_file_send(filename: &str, db: Arc<DB>) -> Result<Response<Body>> {
-    //This is what breaks the code!
-    //when we create owned data from borrowed, it will allocate memory for it
+async fn cache_file_send(filename: &str, db: Arc<DB>) -> Result<Response<Body>> {
     let doc_len = db
         .get_pinned(filename.as_bytes())
         .expect("Does not exist!")
@@ -87,6 +68,7 @@ async fn simple_file_send(filename: &str, db: Arc<DB>) -> Result<Response<Body>>
     let content_length = HeaderValue::from_str(&doc_len.to_string()).unwrap();
 
     let filename = filename.clone().to_owned();
+    // We create an async stream, that reads the values from the DBPinnable slice object in chunks and send them over network
     let make_stream = async_stream::stream! {
         let value = db
             .get_pinned(filename.as_bytes())
@@ -108,7 +90,7 @@ async fn simple_file_send(filename: &str, db: Arc<DB>) -> Result<Response<Body>>
         .header(CONTENT_LENGTH, content_length)
         .body(body)
         .unwrap();
-    Ok(response)
+    return Ok(response);
 }
 
 fn populate_database(db: Arc<DB>) -> std::io::Result<()> {
@@ -124,4 +106,15 @@ fn populate_database(db: Arc<DB>) -> std::io::Result<()> {
             .expect("Failed to add value to database!");
     }
     return Ok(());
+}
+
+fn init_database() -> Arc<DB> {
+    let mut opts = Options::default();
+    opts.create_if_missing(true);
+    opts.set_use_direct_reads(true);
+    opts.set_use_direct_io_for_flush_and_compaction(true);
+    opts.set_max_background_jobs(2);
+    opts.set_compaction_readahead_size(2 * 1024 * 1024); //2MB
+    opts.set_writable_file_max_buffer_size(1024 * 1024); //1MB
+    return Arc::new(DB::open(&opts, CACHE_DATABASE_PATH).unwrap());
 }
