@@ -60,8 +60,12 @@ fn not_found() -> Response<Body> {
 }
 
 async fn cache_file_send(filename: &str, db: Arc<DB>) -> Result<Response<Body>> {
+    let mut opts = rocksdb::ReadOptions::default();
+    opts.fill_cache(false);
+    opts.set_readahead_size(2 * 1024 * 1024);
+
     let doc_len = db
-        .get_pinned(filename.as_bytes())
+        .get_pinned_opt(filename.as_bytes(), &opts)
         .expect("Does not exist!")
         .unwrap()
         .len();
@@ -71,7 +75,7 @@ async fn cache_file_send(filename: &str, db: Arc<DB>) -> Result<Response<Body>> 
     // We create an async stream, that reads the values from the DBPinnable slice object in chunks and send them over network
     let make_stream = async_stream::stream! {
         let value = db
-            .get_pinned(filename.as_bytes())
+            .get_pinned_opt(filename.as_bytes(), &opts)
             .expect("Entry does not exist!")
             .unwrap();
         let mut written: u64 = 0;
