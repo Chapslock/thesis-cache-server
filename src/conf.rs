@@ -7,7 +7,7 @@ pub static LOGGING_ENABLED: bool = false;
 pub static SERVER_IP: [u8; 4] = [0, 0, 0, 0];
 pub static SERVER_PORT: u16 = 80;
 pub static PATH_TO_TEST_FILES: &str = "/var/www/html/";
-pub static TEST_FILES: [&str; 4] = ["500KB.html", "1MB.html", "10MB.html", "100MB.html"];
+pub static TEST_FILES: [&str; 6] = ["500KB.html", "1MB.html", "5MB.html", "10MB.html", "20MB.html", "50MB.html"];
 // */
 /*
 pub static SERVER_IP: [u8; 4] = [127, 0, 0, 1];
